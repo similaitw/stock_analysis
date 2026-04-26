@@ -1,6 +1,7 @@
 .next/
 node_modules/
 .vercel/
+.vercel-global/
 prisma/dev.db
 prisma/dev.db-journal
 coverage/

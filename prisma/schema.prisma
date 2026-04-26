@@ -1,0 +1,24 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model AnalysisResult {
+  id           String   @id @default(cuid())
+  sourceKey    String?  @unique
+  kind         String
+  stockId      String
+  stockName    String?
+  strategyName String?
+  title        String
+  summary      String
+  payload      String?
+  tags         String?
+  source       String   @default("next-ui")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}

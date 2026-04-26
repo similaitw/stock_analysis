@@ -1,0 +1,9 @@
+﻿
+============================================================
+驗證股票: 2330
+============================================================
+
+[1] 測試月營收 (fetch_monthly_revenue)...
+[DataFetcher] 初始化 FinMind API...
+[DataFetcher] [OK] FinMind API 已連線
+Error fetching monthly revenue for 2330: 'data'

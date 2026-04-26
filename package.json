@@ -1,0 +1,37 @@
+{
+  "name": "stock_analysis",
+  "version": "1.0.0",
+  "description": "Taiwan stock research platform with a Next.js UI and Python analysis engine",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint app components lib next.config.js eslint.config.mjs --ext .js,.mjs,.ts,.tsx",
+    "test": ".\\.venv\\Scripts\\python.exe -m pytest",
+    "db:generate": "prisma generate",
+    "db:push": ".\\.venv\\Scripts\\python.exe scripts\\init_analysis_db.py",
+    "db:studio": "prisma studio",
+    "postinstall": "prisma generate"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@prisma/client": "^6.16.0",
+    "next": "^16.2.4",
+    "prisma": "^6.16.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "yahoo-finance2": "^3.14.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "eslint": "^9.39.1",
+    "eslint-config-next": "^16.2.4",
+    "typescript": "^6.0.3"
+  }
+}

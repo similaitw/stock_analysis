@@ -15,6 +15,14 @@ def make_id(prefix: str) -> str:
     return f"{prefix}_{stamp}_{uuid4().hex[:8]}"
 
 
+def make_after_market_scan_id(scan_date: Optional[str] = None) -> str:
+    try:
+        stamp = datetime.fromisoformat(str(scan_date)).strftime("%Y%m%d") if scan_date else datetime.now().strftime("%Y%m%d")
+    except ValueError:
+        stamp = datetime.now().strftime("%Y%m%d")
+    return f"after_market_{stamp}_{uuid4().hex[:8]}"
+
+
 def _safe_float(value: Any) -> Optional[float]:
     try:
         if value is None or value == "":
@@ -417,4 +425,66 @@ class ResearchNote:
             updated_at=data.get("updated_at", now_iso()),
             related_watchlist_id=data.get("related_watchlist_id"),
             related_screen_run_id=data.get("related_screen_run_id"),
+        )
+
+
+@dataclass
+class AfterMarketScan:
+    id: str = field(default_factory=lambda: make_after_market_scan_id())
+    date: str = ""
+    market_scope: str = "All"
+    profile: str = "balanced"
+    executed_at: str = field(default_factory=now_iso)
+    weights: dict[str, Any] = field(default_factory=dict)
+    counts: dict[str, int] = field(default_factory=dict)
+    a_list: list[dict[str, Any]] = field(default_factory=list)
+    b_list: list[dict[str, Any]] = field(default_factory=list)
+    avoid_list: list[dict[str, Any]] = field(default_factory=list)
+    skipped: list[dict[str, Any]] = field(default_factory=list)
+    raw_results: list[dict[str, Any]] = field(default_factory=list)
+    request_payload: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return sanitize_for_json(asdict(self))
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "AfterMarketScan":
+        return cls(
+            id=data.get("id", make_after_market_scan_id(data.get("date"))),
+            date=data.get("date", ""),
+            market_scope=data.get("market_scope", data.get("marketType", "All")),
+            profile=data.get("profile", "balanced"),
+            executed_at=data.get("executed_at", now_iso()),
+            weights=dict(data.get("weights", {}) or {}),
+            counts=dict(data.get("counts", {}) or {}),
+            a_list=list(data.get("a_list", data.get("aList", [])) or []),
+            b_list=list(data.get("b_list", data.get("bList", [])) or []),
+            avoid_list=list(data.get("avoid_list", data.get("avoidList", [])) or []),
+            skipped=list(data.get("skipped", []) or []),
+            raw_results=list(data.get("raw_results", data.get("rawResults", [])) or []),
+            request_payload=dict(data.get("request_payload", data.get("requestPayload", {})) or {}),
+        )
+
+
+@dataclass
+class NextDayWatchlist:
+    id: str = field(default_factory=lambda: make_id("next_day_watchlist"))
+    source_scan_id: str = ""
+    trade_date: str = ""
+    stocks: list[dict[str, Any]] = field(default_factory=list)
+    monitoring_rules: list[str] = field(default_factory=list)
+    created_at: str = field(default_factory=now_iso)
+
+    def to_dict(self) -> dict[str, Any]:
+        return sanitize_for_json(asdict(self))
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "NextDayWatchlist":
+        return cls(
+            id=data.get("id", make_id("next_day_watchlist")),
+            source_scan_id=data.get("source_scan_id", data.get("sourceScanId", "")),
+            trade_date=data.get("trade_date", data.get("tradeDate", "")),
+            stocks=list(data.get("stocks", []) or []),
+            monitoring_rules=list(data.get("monitoring_rules", data.get("monitoringRules", [])) or []),
+            created_at=data.get("created_at", now_iso()),
         )

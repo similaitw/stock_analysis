@@ -8,7 +8,9 @@ type WorkspaceCollection =
   | "trade_plans"
   | "paper_orders"
   | "watchlists"
-  | "research_notes";
+  | "research_notes"
+  | "after_market_scans"
+  | "next_day_watchlists";
 
 type WorkspaceRecord = Record<string, unknown>;
 
@@ -21,7 +23,9 @@ const SORT_KEYS: Record<WorkspaceCollection, string> = {
   trade_plans: "updated_at",
   paper_orders: "updated_at",
   watchlists: "updated_at",
-  research_notes: "updated_at"
+  research_notes: "updated_at",
+  after_market_scans: "executed_at",
+  next_day_watchlists: "created_at"
 };
 
 function normalizeRecord(value: unknown): WorkspaceRecord | null {
@@ -77,7 +81,9 @@ export async function getWorkspaceDashboardSnapshot() {
     tradePlans,
     paperOrders,
     watchlists,
-    researchNotes
+    researchNotes,
+    afterMarketScans,
+    nextDayWatchlists
   ] = await Promise.all([
     readWorkspaceCollection("screen_runs"),
     readWorkspaceCollection("signal_events"),
@@ -85,7 +91,9 @@ export async function getWorkspaceDashboardSnapshot() {
     readWorkspaceCollection("trade_plans"),
     readWorkspaceCollection("paper_orders"),
     readWorkspaceCollection("watchlists"),
-    readWorkspaceCollection("research_notes")
+    readWorkspaceCollection("research_notes"),
+    readWorkspaceCollection("after_market_scans"),
+    readWorkspaceCollection("next_day_watchlists")
   ]);
 
   const pendingOrders = paperOrders.filter((order) =>
@@ -101,7 +109,9 @@ export async function getWorkspaceDashboardSnapshot() {
       paperOrders: paperOrders.length,
       pendingOrders,
       watchlists: watchlists.length,
-      researchNotes: researchNotes.length
+      researchNotes: researchNotes.length,
+      afterMarketScans: afterMarketScans.length,
+      nextDayWatchlists: nextDayWatchlists.length
     },
     screenRuns: screenRuns.slice(0, 5),
     signalEvents: signalEvents.slice(0, 10),
@@ -109,6 +119,8 @@ export async function getWorkspaceDashboardSnapshot() {
     tradePlans: tradePlans.slice(0, 5),
     paperOrders: paperOrders.slice(0, 5),
     watchlists: watchlists.slice(0, 5),
-    researchNotes: researchNotes.slice(0, 5)
+    researchNotes: researchNotes.slice(0, 5),
+    afterMarketScans: afterMarketScans.slice(0, 5),
+    nextDayWatchlists: nextDayWatchlists.slice(0, 5)
   };
 }

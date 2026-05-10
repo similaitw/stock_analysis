@@ -25,6 +25,7 @@ export default async function HomePage() {
         <MetricCard label="Screen Runs" value={snapshot.counts.screenRuns} />
         <MetricCard label="Signals" value={snapshot.counts.signalEvents} />
         <MetricCard label="Backtests" value={snapshot.counts.backtestRuns} />
+        <MetricCard label="After-Market Scans" value={snapshot.counts.afterMarketScans} />
         <MetricCard label="Trade Plans" value={snapshot.counts.tradePlans} />
         <MetricCard label="Pending Orders" value={snapshot.counts.pendingOrders} />
         <MetricCard label="DB Analysis Results" value={analysisResults.length} />
@@ -40,6 +41,19 @@ export default async function HomePage() {
             時間: item.executed_at
           }))}
           emptyMessage="目前沒有 screen runs。"
+        />
+        <DataTable
+          title="最近每日盤後篩選"
+          rows={snapshot.afterMarketScans.map((item) => ({
+            日期: item.date,
+            股票池: item.market_scope,
+            掃描: (item.counts as Record<string, unknown> | undefined)?.scanned ?? 0,
+            A級: (item.counts as Record<string, unknown> | undefined)?.aList ?? 0,
+            B級: (item.counts as Record<string, unknown> | undefined)?.bList ?? 0,
+            避開: (item.counts as Record<string, unknown> | undefined)?.avoidList ?? 0,
+            時間: item.executed_at
+          }))}
+          emptyMessage="目前沒有每日盤後篩選紀錄。"
         />
         <DataTable
           title="最近 Backtests"

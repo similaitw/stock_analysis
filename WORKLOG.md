@@ -17,6 +17,16 @@
 - 未解問題：
 - 下一位接手建議：
 
+## 2026-05-10 17:29:58 +08:00
+- Agent/操作者：Codex GPT-5 Docs/Lead Worker
+- 目標：在不修改程式碼的前提下，整合每日盤後篩選功能的現有實作、團隊回報與驗收狀態，形成 Team Lead 交接報告。
+- 變更摘要：重寫 `reports/TEAM_LEAD_INTEGRATION.md`，整理 scope、delivery status、implementation map、API/bridge contract、整合決策、fresh validation、已知邊界與後續接手建議；追加本 `WORKLOG.md` 紀錄。本輪未編輯任何程式碼。
+- 涉及模組：`reports/TEAM_LEAD_INTEGRATION.md`、`WORKLOG.md`。
+- 決策：保留其他 worker 造成的程式與文件變更，不覆蓋 `.gitignore`、前端、API、scanner、scoring 或 tests；Team Lead 報告只引用現有 team reports、spec 與目前 repo facts。
+- 驗證結果：`.\\.venv\\Scripts\\python.exe -m pytest tests\\test_after_market_scoring.py tests\\test_after_market_scan.py tests\\test_after_market_bridge.py tests\\test_indicator_library.py tests\\test_next_bridge.py tests\\test_workspace_models.py tests\\test_workspace_store.py` 通過（19 passed，2 個既有 `nest_asyncio` deprecation warnings）；`npm run lint` 通過；`npm run build` 通過，build output 包含 `/api/after-market-screening/scan`、`/api/after-market-screening/report/[scanId]` 與 `/strategy`。
+- 未解問題：MVP 仍是手動盤後掃描，不含正式盤中監控；注意/處置股官方資料、產業相對強弱資料覆蓋、歷史勝率驗證與資料庫化保存仍待後續階段。
+- 下一位接手建議：先讓策略頁可載入最近一次盤後掃描報告，再接 `NextDayWatchlist` 的隔日盤中監控與歷史驗證。
+
 ## 2026-04-23 02:28:02 +08:00
 - Agent/操作者：Codex GPT-5
 - 目標：實作「台股研究協作與模擬執行平台」第一批重構，建立交接基準文件、新導航骨架、共享資料模型與最小可用工作流。

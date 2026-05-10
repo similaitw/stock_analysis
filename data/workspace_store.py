@@ -5,7 +5,9 @@ from pathlib import Path
 from typing import Any, Optional
 
 from data.workspace_models import (
+    AfterMarketScan,
     BacktestRun,
+    NextDayWatchlist,
     PaperOrder,
     ResearchNote,
     ScreenRun,
@@ -25,6 +27,8 @@ class WorkspaceStore:
         "paper_orders": PaperOrder,
         "watchlists": Watchlist,
         "research_notes": ResearchNote,
+        "after_market_scans": AfterMarketScan,
+        "next_day_watchlists": NextDayWatchlist,
     }
 
     SORT_KEYS = {
@@ -35,6 +39,8 @@ class WorkspaceStore:
         "paper_orders": "updated_at",
         "watchlists": "updated_at",
         "research_notes": "updated_at",
+        "after_market_scans": "executed_at",
+        "next_day_watchlists": "created_at",
     }
 
     def __init__(self, base_dir: str = "data/workspace"):
@@ -85,6 +91,28 @@ class WorkspaceStore:
 
     def get_screen_run(self, screen_run_id: str) -> Optional[ScreenRun]:
         return self._get_by_id("screen_runs", screen_run_id)
+
+    def save_after_market_scan(self, scan: AfterMarketScan) -> AfterMarketScan:
+        self._write("after_market_scans", scan.id, scan.to_dict())
+        return scan
+
+    def list_after_market_scans(self, limit: Optional[int] = None) -> list[AfterMarketScan]:
+        records = self._read_all("after_market_scans")
+        return records[:limit] if limit else records
+
+    def get_after_market_scan(self, scan_id: str) -> Optional[AfterMarketScan]:
+        return self._get_by_id("after_market_scans", scan_id)
+
+    def save_next_day_watchlist(self, watchlist: NextDayWatchlist) -> NextDayWatchlist:
+        self._write("next_day_watchlists", watchlist.id, watchlist.to_dict())
+        return watchlist
+
+    def list_next_day_watchlists(self, limit: Optional[int] = None) -> list[NextDayWatchlist]:
+        records = self._read_all("next_day_watchlists")
+        return records[:limit] if limit else records
+
+    def get_next_day_watchlist(self, watchlist_id: str) -> Optional[NextDayWatchlist]:
+        return self._get_by_id("next_day_watchlists", watchlist_id)
 
     def save_backtest_run(self, backtest_run: BacktestRun) -> BacktestRun:
         self._write("backtest_runs", backtest_run.id, backtest_run.to_dict())

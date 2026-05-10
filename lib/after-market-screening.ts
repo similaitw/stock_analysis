@@ -3,6 +3,8 @@ import { existsSync } from "fs";
 import path from "path";
 import { promisify } from "util";
 
+import { getCachedCloudAfterMarketReport, runCloudAfterMarketScan } from "@/lib/after-market-cloud";
+
 const execFileAsync = promisify(execFile);
 
 export type AfterMarketProfile = "conservative" | "balanced" | "aggressive";
@@ -76,15 +78,11 @@ function getBridgeScriptPath() {
   return path.join(process.cwd(), "dev_tools", "next_bridge.py");
 }
 
-function assertPythonBridgeAvailable() {
-  const pythonPath = getPythonPath();
-  const bridgeScriptPath = getBridgeScriptPath();
-
-  if (!existsSync(pythonPath) || !existsSync(bridgeScriptPath)) {
-    throw new Error(
-      "盤後篩選目前需要本機 Python bridge。雲端部署尚未接上可執行的掃描 worker，請先在本機執行，或部署前改接 managed backend。"
-    );
+function isPythonBridgeAvailable() {
+  if (process.env.STOCK_ANALYSIS_FORCE_CLOUD_SCANNER === "1") {
+    return false;
   }
+  return existsSync(getPythonPath()) && existsSync(getBridgeScriptPath());
 }
 
 function parseBridgeJson<T>(stdout: string): T {
@@ -106,8 +104,6 @@ function parseBridgeJson<T>(stdout: string): T {
 }
 
 async function runBridge<T>(command: string, payload?: unknown): Promise<T> {
-  assertPythonBridgeAvailable();
-
   const args = [getBridgeScriptPath(), command];
   if (payload !== undefined) {
     args.push(typeof payload === "string" ? payload : JSON.stringify(payload));
@@ -140,9 +136,21 @@ async function runBridge<T>(command: string, payload?: unknown): Promise<T> {
 export async function runAfterMarketScan(
   request: AfterMarketScanRequest
 ): Promise<AfterMarketScanResult> {
+  if (!isPythonBridgeAvailable()) {
+    return runCloudAfterMarketScan(request);
+  }
+
   return runBridge<AfterMarketScanResult>("after_market_scan", request);
 }
 
 export async function fetchAfterMarketReport(scanId: string): Promise<AfterMarketReportResult> {
+  if (!isPythonBridgeAvailable()) {
+    const report = getCachedCloudAfterMarketReport(scanId);
+    if (report) {
+      return report;
+    }
+    throw new Error("Cloud after-market report not found. Run a new scan to refresh the report cache.");
+  }
+
   return runBridge<AfterMarketReportResult>("after_market_report", scanId);
 }

@@ -3,6 +3,8 @@ import { existsSync } from "fs";
 import path from "path";
 import { promisify } from "util";
 
+import { runCloudXQScan } from "@/lib/xq-cloud";
+
 const execFileAsync = promisify(execFile);
 
 export type XQIndicator = {
@@ -80,20 +82,13 @@ function getBridgeScriptPath() {
 }
 
 function isPythonBridgeAvailable() {
+  if (process.env.STOCK_ANALYSIS_FORCE_CLOUD_SCANNER === "1") {
+    return false;
+  }
   return existsSync(getPythonPath()) && existsSync(getBridgeScriptPath());
 }
 
-function pythonBridgeUnavailableError() {
-  return new Error(
-    "XQ 條件掃描目前需要本機 Python bridge。雲端部署尚未接上可執行的掃描 worker，請先在本機執行，或部署前改接 managed backend。"
-  );
-}
-
 async function runBridge<T>(command: string, payload?: unknown): Promise<T> {
-  if (!isPythonBridgeAvailable()) {
-    throw pythonBridgeUnavailableError();
-  }
-
   const args = [getBridgeScriptPath(), command];
   if (payload !== undefined) {
     args.push(JSON.stringify(payload));
@@ -136,5 +131,9 @@ export async function listXQIndicators(): Promise<XQIndicator[]> {
 }
 
 export async function runXQScan(request: XQScanRequest): Promise<XQScanResult> {
+  if (!isPythonBridgeAvailable()) {
+    return runCloudXQScan(request);
+  }
+
   return runBridge<XQScanResult>("xq_scan", request);
 }

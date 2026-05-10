@@ -1,9 +1,14 @@
 .git
 .github
+.env
+.env.*
+.vercel
+.vercel-global
 .venv
 .pytest_cache
 __pycache__
 .next
+data/workspace
 tests
 temp_xscript_preset
 ui

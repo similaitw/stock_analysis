@@ -1,4 +1,7 @@
+import { randomUUID } from "crypto";
+
 import { Prisma } from "@prisma/client";
+import postgres from "postgres";
 
 import { prisma } from "@/lib/prisma";
 import { readWorkspaceCollection } from "@/lib/workspace";
@@ -105,12 +108,148 @@ function mapAnalysisResult(
   };
 }
 
+type ManagedAnalysisRow = {
+  id: string;
+  kind: string;
+  stock_id: string;
+  stock_name: string | null;
+  strategy_name: string | null;
+  title: string;
+  summary: string;
+  payload: string | null;
+  tags: string | null;
+  source: string;
+  created_at: Date | string;
+  updated_at: Date | string;
+  source_key: string | null;
+};
+
+let managedSchemaReady = false;
+let managedSqlUrl = "";
+let managedSql: ReturnType<typeof postgres> | null = null;
+
+function getManagedSql() {
+  const databaseUrl = getDatabaseUrl();
+  if (!databaseUrl || databaseUrl.startsWith("file:")) {
+    throw buildStorageUnavailableError();
+  }
+  if (!managedSql || managedSqlUrl !== databaseUrl) {
+    managedSql = postgres(databaseUrl, {
+      max: 1,
+      prepare: false
+    });
+    managedSqlUrl = databaseUrl;
+    managedSchemaReady = false;
+  }
+  return managedSql;
+}
+
+async function ensureManagedSchema() {
+  if (managedSchemaReady) {
+    return;
+  }
+
+  const sql = getManagedSql();
+  await sql`
+    CREATE TABLE IF NOT EXISTS analysis_results (
+      id TEXT PRIMARY KEY,
+      source_key TEXT UNIQUE,
+      kind TEXT NOT NULL,
+      stock_id TEXT NOT NULL,
+      stock_name TEXT,
+      strategy_name TEXT,
+      title TEXT NOT NULL,
+      summary TEXT NOT NULL,
+      payload TEXT,
+      tags TEXT,
+      source TEXT NOT NULL DEFAULT 'next-ui',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+  managedSchemaReady = true;
+}
+
+function toIso(value: Date | string) {
+  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+}
+
+function mapManagedAnalysisResult(row: ManagedAnalysisRow): AnalysisResultDto {
+  return {
+    id: row.id,
+    kind: row.kind,
+    stockId: row.stock_id,
+    stockName: row.stock_name,
+    strategyName: row.strategy_name,
+    title: row.title,
+    summary: row.summary,
+    payload: parsePayload(row.payload),
+    tags: parseTags(row.tags),
+    source: row.source,
+    createdAt: toIso(row.created_at),
+    updatedAt: toIso(row.updated_at),
+    sourceKey: row.source_key
+  };
+}
+
+async function listManagedAnalysisResults(limit: number): Promise<AnalysisResultDto[]> {
+  await ensureManagedSchema();
+  const sql = getManagedSql();
+  const safeLimit = Math.max(1, Math.min(100, Math.floor(limit || 50)));
+  const records = await sql`
+    SELECT *
+    FROM analysis_results
+    ORDER BY created_at DESC
+    LIMIT ${safeLimit}
+  ` as ManagedAnalysisRow[];
+  return records.map(mapManagedAnalysisResult);
+}
+
+async function createManagedAnalysisResult(input: CreateAnalysisResultInput): Promise<AnalysisResultDto> {
+  await ensureManagedSchema();
+  const sql = getManagedSql();
+  const records = await sql`
+    INSERT INTO analysis_results (
+      id,
+      source_key,
+      kind,
+      stock_id,
+      stock_name,
+      strategy_name,
+      title,
+      summary,
+      payload,
+      tags,
+      source
+    )
+    VALUES (
+      ${randomUUID()},
+      ${input.sourceKey ?? null},
+      ${input.kind},
+      ${input.stockId},
+      ${input.stockName ?? null},
+      ${input.strategyName ?? null},
+      ${input.title},
+      ${input.summary},
+      ${input.payload ? JSON.stringify(input.payload) : null},
+      ${serializeTags(input.tags)},
+      ${input.source ?? "next-ui"}
+    )
+    RETURNING *
+  ` as ManagedAnalysisRow[];
+  return mapManagedAnalysisResult(records[0]);
+}
+
 export async function listAnalysisResults(limit = 50): Promise<AnalysisResultDto[]> {
   if (getAnalysisStorageMode() === "readonly-fallback") {
     return [];
   }
 
   try {
+    if (getAnalysisStorageMode() === "managed-database") {
+      return listManagedAnalysisResults(limit);
+    }
+
     const records = await prisma.analysisResult.findMany({
       orderBy: { createdAt: "desc" },
       take: limit
@@ -128,6 +267,10 @@ export async function createAnalysisResult(
 ): Promise<AnalysisResultDto> {
   if (!canWriteAnalysisResults()) {
     throw buildStorageUnavailableError();
+  }
+
+  if (getAnalysisStorageMode() === "managed-database") {
+    return createManagedAnalysisResult(input);
   }
 
   const record = await prisma.analysisResult.create({
@@ -154,6 +297,10 @@ export async function importWorkspaceBacktests(): Promise<{
 }> {
   if (!canWriteAnalysisResults()) {
     throw buildStorageUnavailableError();
+  }
+
+  if (getAnalysisStorageMode() === "managed-database") {
+    return { imported: 0, skipped: 0 };
   }
 
   const backtests = await readWorkspaceCollection("backtest_runs");

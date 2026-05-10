@@ -42,6 +42,20 @@ Skin switching is handled by `components/skin-switcher.tsx` and CSS variables in
 
 The selected skin is stored in `localStorage` and applied as `data-skin` on the document element.
 
+## Protected Settings
+
+The `/settings` route is protected by a server-side password gate:
+
+- Set `SETTINGS_PASSWORD` in Vercel Production before exposing operational diagnostics.
+- Optional: set `SETTINGS_SESSION_SECRET` to rotate the session cookie independently from the login password.
+- Without `SETTINGS_PASSWORD`, production keeps the settings diagnostics locked.
+
+Command:
+
+```powershell
+vercel env add SETTINGS_PASSWORD production --global-config .vercel-global
+```
+
 ## Next.js Pages
 
 | Route | File | Function |

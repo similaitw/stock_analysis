@@ -1,4 +1,7 @@
 import { getSettingsDiagnostics } from "@/lib/settings-diagnostics";
+import { hasSettingsAccess, isSettingsPasswordConfigured } from "@/lib/settings-auth";
+
+import { lockSettings, unlockSettings } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +15,57 @@ function stateClass(state: keyof typeof STATE_COPY) {
   return `settings-state settings-state-${state}`;
 }
 
-export default async function SettingsPage() {
+function SettingsLogin({ authFailed }: { authFailed: boolean }) {
+  const passwordConfigured = isSettingsPasswordConfigured();
+
+  return (
+    <main className="page-shell settings-page">
+      <section className="settings-lock-panel">
+        <div className="settings-lock-card">
+          <p className="eyebrow">Protected Settings</p>
+          <h2>設定頁需要管理密碼</h2>
+          <p>
+            這裡包含部署、資料庫、Git 與 worker 狀態。請輸入 `SETTINGS_PASSWORD` 管理密碼後再查看。
+          </p>
+
+          {passwordConfigured ? (
+            <form action={unlockSettings} className="settings-login-form">
+              <label htmlFor="settings-password">管理密碼</label>
+              <input
+                id="settings-password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                placeholder="輸入 SETTINGS_PASSWORD"
+                required
+              />
+              {authFailed ? <p className="form-error">密碼不正確，請再試一次。</p> : null}
+              <button type="submit">解鎖設定</button>
+            </form>
+          ) : (
+            <div className="settings-lock-warning">
+              <strong>尚未設定 SETTINGS_PASSWORD</strong>
+              <p>正式環境會保持鎖定，請先在 Vercel 或本機環境變數加入管理密碼。</p>
+              <code>vercel env add SETTINGS_PASSWORD production --global-config .vercel-global</code>
+            </div>
+          )}
+        </div>
+      </section>
+    </main>
+  );
+}
+
+export default async function SettingsPage({
+  searchParams
+}: {
+  searchParams?: Promise<{ auth?: string }>;
+}) {
+  const params = await searchParams;
+  const canAccessSettings = await hasSettingsAccess();
+  if (!canAccessSettings) {
+    return <SettingsLogin authFailed={params?.auth === "failed"} />;
+  }
+
   const diagnostics = await getSettingsDiagnostics();
   const topActions = diagnostics.checks.filter((item) => item.state === "action").slice(0, 3);
 
@@ -25,6 +78,11 @@ export default async function SettingsPage() {
           這裡會檢查目前環境，列出我接下來開發、部署、啟用雲端功能需要你補的設定。
           敏感值只顯示是否存在，不會顯示內容。
         </p>
+        {isSettingsPasswordConfigured() ? (
+          <form action={lockSettings} className="settings-lockout-form">
+            <button type="submit" className="secondary-button">鎖定設定頁</button>
+          </form>
+        ) : null}
       </section>
 
       <section className="metric-grid">

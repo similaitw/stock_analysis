@@ -24,6 +24,24 @@
 | `reports/` | Team handoff and module reports. |
 | `temp_test_files/` | Temporary, ad hoc, or historical root-level test/debug files moved out of the project root. |
 
+## Layout And Skins
+
+The main UI uses a responsive operations layout:
+
+- Desktop (`>=1180px`): sticky left sidebar navigation plus wide work surface.
+- Tablet (`720px-1179px`): compact top command layout with nav grid.
+- Mobile (`<720px`): compact header, horizontal scroll nav, single-column work surface.
+
+Skin switching is handled by `components/skin-switcher.tsx` and CSS variables in `app/globals.css`. Available skins:
+
+- `cedar`: warm wood default
+- `graphite`: neutral professional grey
+- `jade`: green/teal analysis desk
+- `harbor`: blue operations console
+- `crimson`: red finance desk
+
+The selected skin is stored in `localStorage` and applied as `data-skin` on the document element.
+
 ## Next.js Pages
 
 | Route | File | Function |

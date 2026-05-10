@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { SkinSwitcher } from "@/components/skin-switcher";
+
 const NAV_ITEMS = [
   { href: "/", label: "首頁" },
   { href: "/research", label: "研究" },
@@ -19,10 +21,13 @@ export function SiteNav() {
 
   return (
     <nav className="site-nav">
-      <div className="brand-block">
-        <p className="eyebrow">Next.js + React</p>
-        <h1>台股研究協作平台</h1>
-        <p className="subtle">Python 分析核心保留，UI 改為 App Router 與 API route。</p>
+      <div className="nav-head">
+        <div className="brand-mark" aria-hidden="true">台</div>
+        <div className="brand-block">
+          <p className="eyebrow">Next.js + React</p>
+          <h1>台股研究協作平台</h1>
+          <p className="subtle">Python 分析核心保留，UI 改為 App Router 與 API route。</p>
+        </div>
       </div>
       <div className="nav-links">
         {NAV_ITEMS.map((item) => {
@@ -38,6 +43,7 @@ export function SiteNav() {
           );
         })}
       </div>
+      <SkinSwitcher />
     </nav>
   );
 }

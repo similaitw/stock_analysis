@@ -1,5 +1,7 @@
 import YahooFinance from "yahoo-finance2";
 
+import { getTaiwanStockDisplayName } from "@/lib/taiwan-stock-names";
+
 type MarketType = "TEST" | "Tw50" | "All" | "TSE" | "OTC" | "Custom";
 
 export type CloudPriceBar = {
@@ -137,7 +139,7 @@ export async function fetchCloudStock(stockId: string): Promise<CloudStockPayloa
 
       return {
         stockId,
-        stockName: quote.shortName ?? quote.longName ?? stockId,
+        stockName: getTaiwanStockDisplayName(stockId, quote.shortName ?? quote.longName ?? stockId),
         bars
       };
     } catch (error) {

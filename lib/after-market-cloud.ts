@@ -14,6 +14,7 @@ import type {
   AfterMarketScanResult,
   AfterMarketScreeningItem
 } from "@/lib/after-market-screening";
+import { getTaiwanStockDisplayName } from "@/lib/taiwan-stock-names";
 
 type ScoredItem = AfterMarketScreeningItem & {
   bucket: "A" | "B" | "avoid" | "hidden";
@@ -301,7 +302,7 @@ export async function runCloudAfterMarketScan(request: AfterMarketScanRequest): 
       return {
         skipped: {
           stockId,
-          stockName: stockId,
+          stockName: getTaiwanStockDisplayName(stockId),
           skipReason: error instanceof Error ? error.message : "cloud fetch failed"
         }
       };

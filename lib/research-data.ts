@@ -1,5 +1,7 @@
 import YahooFinance from "yahoo-finance2";
 
+import { getTaiwanStockDisplayName, getTaiwanStockInfo } from "@/lib/taiwan-stock-names";
+
 export type ResearchSnapshot = {
   ticker: string;
   name: string;
@@ -82,10 +84,12 @@ async function fetchSymbolSnapshot(ticker: string, symbol: string): Promise<Rese
     ["Yield", toPercent(summary.summaryDetail?.dividendYield)]
   ]);
 
+  const localInfo = getTaiwanStockInfo(ticker);
+
   return {
     ticker,
-    name: quote.shortName ?? quote.longName ?? symbol,
-    industry: summary.summaryProfile?.industry ?? "-",
+    name: getTaiwanStockDisplayName(ticker, quote.shortName ?? quote.longName ?? symbol),
+    industry: localInfo?.industry ?? summary.summaryProfile?.industry ?? "-",
     description: summary.summaryProfile?.longBusinessSummary ?? "",
     currentPrice: toNumber(summary.price?.regularMarketPrice ?? quote.regularMarketPrice),
     fundamentals,

@@ -10,7 +10,8 @@ const NAV_ITEMS = [
   { href: "/validation", label: "驗證" },
   { href: "/execution", label: "執行" },
   { href: "/collaboration", label: "協作" },
-  { href: "/analysis-results", label: "分析結果 DB" }
+  { href: "/analysis-results", label: "分析結果 DB" },
+  { href: "/settings", label: "設定" }
 ];
 
 export function SiteNav() {

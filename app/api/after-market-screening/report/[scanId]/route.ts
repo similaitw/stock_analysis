@@ -25,7 +25,12 @@ export async function GET(_request: Request, context: RouteContext) {
     return NextResponse.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    const status = message.includes("not found") ? 404 : 500;
+    let status = 500;
+    if (message.includes("not found")) {
+      status = 404;
+    } else if (message.includes("Python bridge") || message.includes("managed backend")) {
+      status = 503;
+    }
 
     return NextResponse.json(
       {

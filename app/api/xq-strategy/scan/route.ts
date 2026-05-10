@@ -8,9 +8,12 @@ export async function POST(request: Request) {
     const result = await runXQScan(payload);
     return NextResponse.json(result);
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    const status = message.includes("Python bridge") || message.includes("managed backend") ? 503 : 500;
+
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unknown error" },
-      { status: 500 }
+      { error: message },
+      { status }
     );
   }
 }

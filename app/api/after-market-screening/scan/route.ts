@@ -43,9 +43,12 @@ export async function POST(request: Request) {
     return NextResponse.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    const status = message.includes("Request body") || message.includes("required") || message.includes("must be")
-      ? 400
-      : 500;
+    let status = 500;
+    if (message.includes("Request body") || message.includes("required") || message.includes("must be")) {
+      status = 400;
+    } else if (message.includes("Python bridge") || message.includes("managed backend")) {
+      status = 503;
+    }
 
     return NextResponse.json(
       {

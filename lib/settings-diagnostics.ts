@@ -166,11 +166,15 @@ export async function getSettingsDiagnostics(): Promise<SettingsDiagnostics> {
     {
       id: "queue-worker",
       title: "Managed Worker / Queue",
-      state: "warning",
-      current: "尚未拆出背景 worker",
+      state: hasManagedDatabase ? "ready" : "warning",
+      current: hasManagedDatabase
+        ? "Scan Jobs API 與 managed DB 狀態表已可用"
+        : "尚未接上 managed database，無法保存任務狀態",
       why: "大型股票池掃描可能超過 Vercel Function 執行時間，應改成排程、佇列或獨立 API service。",
-      prompt: "下一階段可接 Vercel Cron + Queue、或把 Python 掃描核心部署成長任務服務。",
-      command: "設計 /api/scan-jobs + worker 狀態表"
+      prompt: hasManagedDatabase
+        ? "可先用 /api/scan-jobs 建立任務，再由 /api/scan-jobs/process 處理；若要更大量，下一步接 Vercel Cron 或正式 Queue。"
+        : "先接上 DATABASE_URL，再啟用 scan_jobs 狀態表。",
+      command: "POST /api/scan-jobs -> POST /api/scan-jobs/process"
     },
     {
       id: "finmind-token",
@@ -223,11 +227,17 @@ export async function getSettingsDiagnostics(): Promise<SettingsDiagnostics> {
     {
       id: "vercel-auth",
       title: "Vercel CLI Auth",
-      state: hasVercelLocalAuth ? "ready" : "warning",
-      current: hasVercelLocalAuth ? "本機 .vercel-global auth 存在" : "本機 auth 檔不存在",
+      state: isVercel || hasVercelLocalAuth ? "ready" : "warning",
+      current: isVercel
+        ? "Vercel runtime 不需要本機 CLI auth"
+        : hasVercelLocalAuth
+          ? "本機 .vercel-global auth 存在"
+          : "本機 auth 檔不存在",
       why: "這台 Windows 上預設 Vercel auth 路徑曾經受限，使用 .vercel-global 較穩。",
-      prompt: "若部署失敗，先重新登入 Vercel CLI。",
-      command: "vercel login --global-config .vercel-global"
+      prompt: isVercel
+        ? "這是雲端預期狀態；CLI auth 只影響本機部署操作。"
+        : "若部署失敗，先重新登入 Vercel CLI。",
+      command: isVercel ? "vercel env ls --global-config .vercel-global" : "vercel login --global-config .vercel-global"
     },
     {
       id: "github",

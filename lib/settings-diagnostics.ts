@@ -66,6 +66,22 @@ function stateRank(state: CheckState) {
   return state === "action" ? 0 : state === "warning" ? 1 : 2;
 }
 
+function getVercelGitRemote() {
+  const owner = process.env.VERCEL_GIT_REPO_OWNER;
+  const slug = process.env.VERCEL_GIT_REPO_SLUG;
+  if (owner && slug) {
+    return `https://github.com/${owner}/${slug}.git`;
+  }
+  return "";
+}
+
+function getVercelGitAuthor() {
+  const author = process.env.VERCEL_GIT_COMMIT_AUTHOR_LOGIN
+    ?? process.env.VERCEL_GIT_COMMIT_AUTHOR_NAME
+    ?? "";
+  return author;
+}
+
 export async function getSettingsDiagnostics(): Promise<SettingsDiagnostics> {
   const root = process.cwd();
   const gitConfig = readTextIfExists(path.join(root, ".git", "config"));
@@ -79,9 +95,15 @@ export async function getSettingsDiagnostics(): Promise<SettingsDiagnostics> {
   const dataSource = process.env.DATA_SOURCE ?? "AUTO";
   const hasVercelProject = Boolean(vercelProject);
   const hasVercelLocalAuth = existsSync(path.join(root, ".vercel-global", "auth.json"));
-  const gitRemote = parseGitConfigValue(gitConfig, "[remote \"origin\"]", "url");
+  const localGitRemote = parseGitConfigValue(gitConfig, "[remote \"origin\"]", "url");
+  const gitRemote = localGitRemote || getVercelGitRemote();
   const gitName = parseGitConfigValue(gitConfig, "[user]", "name");
   const gitEmail = parseGitConfigValue(gitConfig, "[user]", "email");
+  const vercelGitAuthor = getVercelGitAuthor();
+  const hasLocalGitConfig = Boolean(gitConfig);
+  const hasExpectedGitRemote = gitRemote.includes("similaitw/stock_analysis");
+  const hasExpectedGitAuthor = gitEmail === "similai.tw@gmail.com";
+  const githubCheckReady = hasExpectedGitRemote && (hasExpectedGitAuthor || isVercel);
 
   const checks: SettingsCheck[] = [
     {
@@ -195,12 +217,20 @@ export async function getSettingsDiagnostics(): Promise<SettingsDiagnostics> {
     {
       id: "github",
       title: "GitHub Remote / Author",
-      state: gitRemote.includes("similaitw/stock_analysis") && gitEmail === "similai.tw@gmail.com" ? "ready" : "action",
-      current: gitRemote
+      state: githubCheckReady ? "ready" : hasExpectedGitRemote && isVercel ? "warning" : "action",
+      current: hasLocalGitConfig && gitRemote
         ? `${gitRemote} / ${gitName || "unknown"} <${gitEmail || "unknown"}>`
-        : "找不到 Git remote",
+        : gitRemote
+          ? `${gitRemote} / Vercel commit author: ${vercelGitAuthor || "unknown"}`
+          : isVercel
+            ? "Vercel deployment 不包含 .git/config，且尚未暴露 Git system env"
+            : "找不到 Git remote",
       why: "後續 push 與協作交接要固定到你的 GitHub 與指定作者。",
-      prompt: "應使用 similaitw/stock_analysis 與 similai.tw@gmail.com。",
+      prompt: githubCheckReady
+        ? isVercel && !hasLocalGitConfig
+          ? "雲端部署已連到 similaitw/stock_analysis；Git author 以本機 git config 為準。"
+          : "Git remote 與 author 已符合指定設定。"
+        : "本機應使用 similaitw/stock_analysis 與 similai.tw@gmail.com；雲端若沒有 Git env，請在 Vercel 開啟 system env 或以本機設定為準。",
       command: "git config user.email similai.tw@gmail.com"
     }
   ];
@@ -220,7 +250,9 @@ export async function getSettingsDiagnostics(): Promise<SettingsDiagnostics> {
       storageMode: getAnalysisStorageMode(),
       projectName: process.env.VERCEL_PROJECT_PRODUCTION_URL ?? "stock_analysis",
       gitRemote: gitRemote || "unknown",
-      gitAuthor: gitEmail ? `${gitName || "unknown"} <${gitEmail}>` : "unknown"
+      gitAuthor: gitEmail
+        ? `${gitName || "unknown"} <${gitEmail}>`
+        : vercelGitAuthor || "unknown"
     },
     checks: checks.toSorted((left, right) => stateRank(left.state) - stateRank(right.state))
   };

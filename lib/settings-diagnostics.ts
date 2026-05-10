@@ -92,6 +92,7 @@ export async function getSettingsDiagnostics(): Promise<SettingsDiagnostics> {
     && existsSync(path.join(root, "dev_tools", "next_bridge.py"));
   const hasWorkspaceData = existsSync(path.join(root, "data", "workspace"));
   const isVercel = Boolean(process.env.VERCEL);
+  const hasFinmindToken = hasUsefulEnv("FINMIND_API_TOKEN");
   const dataSource = process.env.DATA_SOURCE ?? "AUTO";
   const hasVercelProject = Boolean(vercelProject);
   const hasVercelLocalAuth = existsSync(path.join(root, ".vercel-global", "auth.json"));
@@ -137,13 +138,21 @@ export async function getSettingsDiagnostics(): Promise<SettingsDiagnostics> {
     {
       id: "python-bridge",
       title: "Local Python Bridge",
-      state: hasPythonBridge ? "ready" : isVercel ? "warning" : "action",
-      current: hasPythonBridge ? "本機 Python bridge 可用" : "找不到 .venv 或 next_bridge.py",
+      state: hasPythonBridge || isVercel ? "ready" : "action",
+      current: hasPythonBridge
+        ? "本機 Python bridge 可用"
+        : isVercel
+          ? "Vercel runtime 不包含本機 .venv，已改用 cloud fallback"
+          : "找不到 .venv 或 next_bridge.py",
       why: "完整盤後篩選與 XQ 掃描仍以 Python 分析核心最完整；Vercel 目前使用 Node/Yahoo fallback。",
       prompt: hasPythonBridge
         ? "本機開發可跑完整 Python 掃描；雲端大型掃描下一步要拆成 managed worker 或 API service。"
-        : "若要本機跑完整掃描，先建立 .venv 並安裝 requirements。",
-      command: ".\\.venv\\Scripts\\python.exe -m pytest tests\\test_after_market_bridge.py"
+        : isVercel
+          ? "這是雲端預期狀態，不需要在 Vercel 補 .venv；小批量掃描由 Node/Yahoo fallback 執行。"
+          : "若要本機跑完整掃描，先建立 .venv 並安裝 requirements。",
+      command: hasPythonBridge || !isVercel
+        ? ".\\.venv\\Scripts\\python.exe -m pytest tests\\test_after_market_bridge.py"
+        : "POST /api/after-market-screening/scan"
     },
     {
       id: "cloud-scanner",
@@ -166,12 +175,12 @@ export async function getSettingsDiagnostics(): Promise<SettingsDiagnostics> {
     {
       id: "finmind-token",
       title: "FINMIND_API_TOKEN",
-      state: hasUsefulEnv("FINMIND_API_TOKEN") ? "ready" : "warning",
-      current: hasUsefulEnv("FINMIND_API_TOKEN") ? "已設定，不顯示內容" : "未設定或仍是範例值",
+      state: hasFinmindToken ? "ready" : "warning",
+      current: hasFinmindToken ? "已設定，不顯示內容" : "未設定或仍是範例值",
       why: "Python 資料來源使用 FinMind 時需要 token；純 Yahoo fallback 不需要。",
-      prompt: hasUsefulEnv("FINMIND_API_TOKEN")
+      prompt: hasFinmindToken
         ? "本機完整資料來源可用；若雲端 worker 要使用 FinMind，也要把 token 放到 Vercel env。"
-        : "需要完整籌碼/法人資料時，請補 FinMind token。",
+        : "目前雲端可用 Yahoo fallback；需要完整籌碼/法人資料或 Python worker 時，再補 FinMind token。",
       command: "vercel env add FINMIND_API_TOKEN production --global-config .vercel-global"
     },
     {
@@ -186,13 +195,19 @@ export async function getSettingsDiagnostics(): Promise<SettingsDiagnostics> {
     {
       id: "workspace-data",
       title: "Workspace Data",
-      state: hasWorkspaceData ? "ready" : "warning",
-      current: hasWorkspaceData ? "本機 data/workspace 存在" : "找不到 data/workspace",
+      state: hasWorkspaceData || (isVercel && hasManagedDatabase) ? "ready" : "warning",
+      current: hasWorkspaceData
+        ? "本機 data/workspace 存在"
+        : isVercel && hasManagedDatabase
+          ? "Vercel 已改用 managed database，不依賴 data/workspace"
+          : "找不到 data/workspace",
       why: "首頁、策略頁會讀取既有 JSON workspace 作為歷史掃描與回測資料。",
       prompt: hasWorkspaceData
         ? "本機歷史資料可讀；Vercel 已排除上傳 data/workspace，雲端應改走資料庫。"
-        : "若要顯示舊資料，請確認 data/workspace 是否已同步到本機。",
-      command: "npm run db:push"
+        : isVercel && hasManagedDatabase
+          ? "這是雲端預期狀態；新的分析結果會寫入 managed Postgres。"
+          : "若要顯示舊資料，請確認 data/workspace 是否已同步到本機。",
+      command: hasWorkspaceData || !isVercel ? "npm run db:push" : "GET /api/analysis-results"
     },
     {
       id: "vercel-link",

@@ -25,3 +25,5 @@ temp_xscript_preset/
 
 .DS_Store
 Thumbs.db
+
+.env*.local

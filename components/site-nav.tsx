@@ -7,6 +7,8 @@ import { SkinSwitcher } from "@/components/skin-switcher";
 
 const NAV_ITEMS = [
   { href: "/", label: "首頁" },
+  { href: "/beginner-guide", label: "新手教學" },
+  { href: "/investor", label: "投資決策" },
   { href: "/research", label: "研究" },
   { href: "/strategy", label: "策略" },
   { href: "/validation", label: "驗證" },

@@ -37,6 +37,18 @@ export type CreateAnalysisResultInput = {
 
 export type AnalysisStorageMode = "managed-database" | "local-file" | "readonly-fallback";
 
+export type BacktestMetrics = {
+  period: string | null;
+  totalReturnPct: number | null;
+  benchmarkReturnPct: number | null;
+  maxDrawdownPct: number | null;
+  winRatePct: number | null;
+  tradeCount: number;
+  finalValue: number | null;
+  startingCash: number | null;
+  commissionRate: number | null;
+};
+
 function getDatabaseUrl() {
   return process.env.DATABASE_URL ?? "";
 }
@@ -86,6 +98,106 @@ function parseTags(value: string | null): string[] {
 
 function serializeTags(tags?: string[]) {
   return tags && tags.length > 0 ? tags.join(",") : null;
+}
+
+function toNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function toArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function calculateMaxDrawdownPct(trades: unknown[]): number | null {
+  const equityValues = trades
+    .map((trade) => {
+      const record = toRecord(trade);
+      return toNumber(record.equity ?? record.portfolio_value ?? record.value ?? record.final_value);
+    })
+    .filter((value): value is number => value !== null);
+
+  if (equityValues.length === 0) {
+    return null;
+  }
+
+  let peak = equityValues[0];
+  let maxDrawdown = 0;
+  for (const value of equityValues) {
+    peak = Math.max(peak, value);
+    if (peak > 0) {
+      maxDrawdown = Math.min(maxDrawdown, (value - peak) / peak);
+    }
+  }
+  return Number((maxDrawdown * 100).toFixed(2));
+}
+
+function calculateWinRatePct(trades: unknown[]): number | null {
+  const closedTrades = trades
+    .map((trade) => toRecord(trade))
+    .map((trade) => toNumber(trade.pnl ?? trade.profit ?? trade.return_pct ?? trade.returnPct))
+    .filter((value): value is number => value !== null);
+
+  if (closedTrades.length === 0) {
+    return null;
+  }
+
+  const wins = closedTrades.filter((value) => value > 0).length;
+  return Number(((wins / closedTrades.length) * 100).toFixed(2));
+}
+
+export function normalizeBacktestMetrics(record: Record<string, unknown>): BacktestMetrics {
+  const trades = toArray(record.trades);
+
+  return {
+    period: record.period ? String(record.period) : null,
+    totalReturnPct: toNumber(record.total_return_pct ?? record.totalReturnPct),
+    benchmarkReturnPct: toNumber(record.benchmark_return_pct ?? record.benchmarkReturnPct),
+    maxDrawdownPct: toNumber(record.max_drawdown_pct ?? record.maxDrawdownPct) ?? calculateMaxDrawdownPct(trades),
+    winRatePct: toNumber(record.win_rate_pct ?? record.winRatePct) ?? calculateWinRatePct(trades),
+    tradeCount: Math.max(0, Math.floor(toNumber(record.trade_count ?? record.tradeCount) ?? trades.length)),
+    finalValue: toNumber(record.final_value ?? record.finalValue),
+    startingCash: toNumber(record.starting_cash ?? record.startingCash),
+    commissionRate: toNumber(record.commission_rate ?? record.commissionRate)
+  };
+}
+
+function normalizeAnalysisPayload(input: CreateAnalysisResultInput) {
+  const payload = input.payload ? { ...input.payload } : null;
+  if (!payload) {
+    return null;
+  }
+
+  if (input.kind.toLowerCase().includes("backtest") || input.tags?.includes("backtest")) {
+    return {
+      ...payload,
+      backtestMetrics: normalizeBacktestMetrics(payload)
+    };
+  }
+
+  return payload;
+}
+
+function buildBacktestSummary(metrics: BacktestMetrics, fallbackId: string) {
+  const parts = [
+    metrics.period ? `期間 ${metrics.period}` : null,
+    metrics.totalReturnPct !== null ? `總報酬 ${metrics.totalReturnPct}%` : null,
+    metrics.maxDrawdownPct !== null ? `最大回撤 ${metrics.maxDrawdownPct}%` : null,
+    metrics.winRatePct !== null ? `勝率 ${metrics.winRatePct}%` : null,
+    `交易 ${metrics.tradeCount} 筆`
+  ].filter(Boolean);
+
+  return parts.length > 0 ? parts.join(" / ") : `Imported from workspace backtest run ${fallbackId}`;
 }
 
 function mapAnalysisResult(
@@ -208,6 +320,7 @@ async function listManagedAnalysisResults(limit: number): Promise<AnalysisResult
 async function createManagedAnalysisResult(input: CreateAnalysisResultInput): Promise<AnalysisResultDto> {
   await ensureManagedSchema();
   const sql = getManagedSql();
+  const normalizedPayload = normalizeAnalysisPayload(input);
   const records = await sql`
     INSERT INTO analysis_results (
       id,
@@ -231,13 +344,25 @@ async function createManagedAnalysisResult(input: CreateAnalysisResultInput): Pr
       ${input.strategyName ?? null},
       ${input.title},
       ${input.summary},
-      ${input.payload ? JSON.stringify(input.payload) : null},
+      ${normalizedPayload ? JSON.stringify(normalizedPayload) : null},
       ${serializeTags(input.tags)},
       ${input.source ?? "next-ui"}
     )
     RETURNING *
   ` as ManagedAnalysisRow[];
   return mapManagedAnalysisResult(records[0]);
+}
+
+async function findManagedAnalysisResultBySourceKey(sourceKey: string): Promise<AnalysisResultDto | null> {
+  await ensureManagedSchema();
+  const sql = getManagedSql();
+  const records = await sql`
+    SELECT *
+    FROM analysis_results
+    WHERE source_key = ${sourceKey}
+    LIMIT 1
+  ` as ManagedAnalysisRow[];
+  return records[0] ? mapManagedAnalysisResult(records[0]) : null;
 }
 
 export async function listAnalysisResults(limit = 50): Promise<AnalysisResultDto[]> {
@@ -273,6 +398,7 @@ export async function createAnalysisResult(
     return createManagedAnalysisResult(input);
   }
 
+  const normalizedPayload = normalizeAnalysisPayload(input);
   const record = await prisma.analysisResult.create({
     data: {
       sourceKey: input.sourceKey,
@@ -282,7 +408,7 @@ export async function createAnalysisResult(
       strategyName: input.strategyName,
       title: input.title,
       summary: input.summary,
-      payload: input.payload ? JSON.stringify(input.payload) : null,
+      payload: normalizedPayload ? JSON.stringify(normalizedPayload) : null,
       tags: serializeTags(input.tags),
       source: input.source ?? "next-ui"
     }
@@ -299,10 +425,6 @@ export async function importWorkspaceBacktests(): Promise<{
     throw buildStorageUnavailableError();
   }
 
-  if (getAnalysisStorageMode() === "managed-database") {
-    return { imported: 0, skipped: 0 };
-  }
-
   const backtests = await readWorkspaceCollection("backtest_runs");
   let imported = 0;
   let skipped = 0;
@@ -314,25 +436,29 @@ export async function importWorkspaceBacktests(): Promise<{
       continue;
     }
 
-    const existing = await prisma.analysisResult.findUnique({ where: { sourceKey } });
+    const existing = getAnalysisStorageMode() === "managed-database"
+      ? await findManagedAnalysisResultBySourceKey(sourceKey)
+      : await prisma.analysisResult.findUnique({ where: { sourceKey } });
     if (existing) {
       skipped += 1;
       continue;
     }
 
-    await prisma.analysisResult.create({
-      data: {
-        sourceKey,
-        kind: "BACKTEST",
-        stockId: String(record.stock_id ?? ""),
-        stockName: record.stock_name ? String(record.stock_name) : null,
-        strategyName: record.strategy_name ? String(record.strategy_name) : null,
-        title: `${String(record.stock_id ?? "")} ${String(record.strategy_name ?? "Backtest")}`,
-        summary: `Imported from workspace backtest run ${String(record.id)}`,
-        payload: JSON.stringify(record),
-        tags: serializeTags(["workspace", "backtest"]),
-        source: "workspace-import"
-      }
+    const metrics = normalizeBacktestMetrics(record);
+    await createAnalysisResult({
+      sourceKey,
+      kind: "BACKTEST",
+      stockId: String(record.stock_id ?? ""),
+      stockName: record.stock_name ? String(record.stock_name) : undefined,
+      strategyName: record.strategy_name ? String(record.strategy_name) : undefined,
+      title: `${String(record.stock_id ?? "")} ${String(record.strategy_name ?? "Backtest")}`,
+      summary: buildBacktestSummary(metrics, String(record.id)),
+      payload: {
+        ...record,
+        backtestMetrics: metrics
+      },
+      tags: ["workspace", "backtest"],
+      source: "workspace-import"
     });
     imported += 1;
   }

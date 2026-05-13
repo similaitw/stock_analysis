@@ -3,6 +3,7 @@ import { existsSync } from "fs";
 import path from "path";
 import { promisify } from "util";
 
+import { getCachedDailyAfterMarketReport } from "@/lib/after-market-scan-cache";
 import { getCachedCloudAfterMarketReport, runCloudAfterMarketScan } from "@/lib/after-market-cloud";
 
 const execFileAsync = promisify(execFile);
@@ -144,6 +145,18 @@ export async function runAfterMarketScan(
 }
 
 export async function fetchAfterMarketReport(scanId: string): Promise<AfterMarketReportResult> {
+  const cachedDailyReport = await getCachedDailyAfterMarketReport(scanId);
+  if (cachedDailyReport) {
+    return {
+      ...(cachedDailyReport.result as AfterMarketReportResult),
+      rawResults: {
+        source: "daily-scan-cache",
+        cachedAt: cachedDailyReport.updatedAt,
+        storageMode: cachedDailyReport.storageMode
+      }
+    };
+  }
+
   if (!isPythonBridgeAvailable()) {
     const report = getCachedCloudAfterMarketReport(scanId);
     if (report) {

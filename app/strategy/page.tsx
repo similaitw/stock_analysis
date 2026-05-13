@@ -9,6 +9,8 @@ import {
 import { XQStrategyWorkbench } from "@/components/xq-strategy-workbench";
 import { getWorkspaceDashboardSnapshot } from "@/lib/workspace";
 import { listXQIndicators } from "@/lib/xq-strategy";
+import { getAfterMarketStockCategories, getAfterMarketStockOptions } from "@/lib/stock-universe";
+import { listDailyAfterMarketScanCache } from "@/lib/after-market-scan-cache";
 
 export const dynamic = "force-dynamic";
 
@@ -77,10 +79,13 @@ async function getRecentAfterMarketScans(): Promise<RecentAfterMarketScan[]> {
 }
 
 export default async function StrategyPage() {
-  const [snapshot, indicators, recentAfterMarketScans] = await Promise.all([
+  const [snapshot, indicators, recentAfterMarketScans, stockCategories, stockOptions, dailyCacheEntries] = await Promise.all([
     getWorkspaceDashboardSnapshot(),
     listXQIndicators(),
-    getRecentAfterMarketScans()
+    getRecentAfterMarketScans(),
+    getAfterMarketStockCategories(),
+    getAfterMarketStockOptions(),
+    listDailyAfterMarketScanCache()
   ]);
 
   return (
@@ -93,7 +98,12 @@ export default async function StrategyPage() {
 
       <XQStrategyWorkbench indicators={indicators} />
 
-      <AfterMarketScreeningWorkbench recentScans={recentAfterMarketScans} />
+      <AfterMarketScreeningWorkbench
+        recentScans={recentAfterMarketScans}
+        stockCategories={stockCategories}
+        stockOptions={stockOptions}
+        initialCacheEntries={dailyCacheEntries}
+      />
 
       <DataTable
         title="最近每日盤後篩選"

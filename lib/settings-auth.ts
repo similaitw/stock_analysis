@@ -52,7 +52,7 @@ export async function setSettingsSession() {
   (await cookies()).set(SETTINGS_COOKIE, createSessionToken(), {
     httpOnly: true,
     maxAge: SESSION_TTL_SECONDS,
-    path: "/settings",
+    path: "/",
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production"
   });
@@ -62,7 +62,7 @@ export async function clearSettingsSession() {
   (await cookies()).set(SETTINGS_COOKIE, "", {
     httpOnly: true,
     maxAge: 0,
-    path: "/settings",
+    path: "/",
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production"
   });

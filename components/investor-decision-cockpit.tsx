@@ -70,6 +70,16 @@ function formatScore(value: number | null) {
   return value === null ? "-" : value.toFixed(value % 1 === 0 ? 0 : 1);
 }
 
+function getCandidateAction(candidate: Candidate) {
+  if (candidate.bucket.includes("A") || candidate.decisionScore >= 70) {
+    return "優先研究";
+  }
+  if (candidate.bucket.includes("B") || candidate.decisionScore >= 55) {
+    return "先觀察";
+  }
+  return "暫緩";
+}
+
 function formatDateTime(value: unknown) {
   const raw = asString(value, "");
   if (!raw) {
@@ -340,11 +350,10 @@ export function InvestorDecisionCockpit({ snapshot, analysisResults }: InvestorD
     <div className="investor-cockpit">
       <section className="investor-brief panel">
         <div>
-          <p className="eyebrow">Investor Decision Cockpit</p>
+          <p className="eyebrow">Today Checklist</p>
           <h2>今日投資決策中控台</h2>
           <p>
-            只整合目前 workspace snapshot 與 analysis results，協助投資人把「候選、風險、驗證、交易計畫、資料新鮮度」
-            放在同一個決策畫面檢查。
+            本頁適合盤後掃描完成後使用。先看「今日先做什麼」，再決定哪些股票要研究、哪些只觀察、哪些先避開。
           </p>
         </div>
         <dl className="investor-brief-stats">
@@ -363,6 +372,24 @@ export function InvestorDecisionCockpit({ snapshot, analysisResults }: InvestorD
         </dl>
       </section>
 
+      <section className="investor-next-steps">
+        <article>
+          <span>1</span>
+          <strong>先看優先研究</strong>
+          <small>決策分較高或 A 級候選，才值得進入個股分析。</small>
+        </article>
+        <article>
+          <span>2</span>
+          <strong>再看風險觀察</strong>
+          <small>避開名單與風險分數高的股票，今天先排除。</small>
+        </article>
+        <article>
+          <span>3</span>
+          <strong>最後補交易計畫</strong>
+          <small>沒有進場、停損、部位大小，就不要下單。</small>
+        </article>
+      </section>
+
       <section className="investor-grid">
         <div className="panel investor-panel">
           <div className="panel-header">
@@ -377,6 +404,9 @@ export function InvestorDecisionCockpit({ snapshot, analysisResults }: InvestorD
                 <article className="investor-candidate" key={`${candidate.source}-${candidate.stockId}`}>
                   <div className="investor-candidate-top">
                     <div>
+                      <span className={`investor-action-label ${getCandidateAction(candidate) === "優先研究" ? "go" : getCandidateAction(candidate) === "先觀察" ? "watch" : "hold"}`}>
+                        {getCandidateAction(candidate)}
+                      </span>
                       <strong>{candidate.stockId} {candidate.stockName}</strong>
                       <span>{candidate.bucket}</span>
                     </div>
@@ -387,10 +417,10 @@ export function InvestorDecisionCockpit({ snapshot, analysisResults }: InvestorD
                   </div>
                   <p>{candidate.plan}</p>
                   <div className="investor-score-line">
-                    <span>掃描 {formatScore(candidate.score)}</span>
-                    <span>支持 {candidate.supportScore}</span>
-                    <span>新鮮 {candidate.freshnessScore}</span>
-                    <span>風險 {formatScore(candidate.riskScore)}</span>
+                    <span title="盤後掃描原始分數">掃描分 {formatScore(candidate.score)}</span>
+                    <span title="分析與回測資料支持程度">資料支持 {candidate.supportScore}</span>
+                    <span title="資料越新分數越高">資料新鮮 {candidate.freshnessScore}</span>
+                    <span title="負分越大代表風險越高">風險分 {formatScore(candidate.riskScore)}</span>
                   </div>
                   <div className="investor-tags">
                     {candidate.reasons.length > 0 ? (
@@ -399,7 +429,11 @@ export function InvestorDecisionCockpit({ snapshot, analysisResults }: InvestorD
                       <span>等待更多理由</span>
                     )}
                   </div>
-                  <small>分析/回測支持：{candidate.supportCount} 筆</small>
+                  <div className="investor-candidate-links">
+                    <a href={`/research?ticker=${encodeURIComponent(candidate.stockId)}`}>看個股分析</a>
+                    <a href="/execution">建立交易計畫</a>
+                  </div>
+                  <small>分析與回測支持：{candidate.supportCount} 筆</small>
                 </article>
               ))}
             </div>

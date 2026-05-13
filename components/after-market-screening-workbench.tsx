@@ -157,17 +157,17 @@ const STRATEGY_PRESETS: Array<{
 const SECTION_COPY: Record<ResultSection, { title: string; empty: string; tone: string }> = {
   aList: {
     title: "A 級觀察",
-    empty: "目前沒有 A 級觀察標的。",
+    empty: "目前沒有 A 級觀察標的。可以先看 B 級觀察，或改用較積極的策略組合。",
     tone: "strong"
   },
   bList: {
     title: "B 級觀察",
-    empty: "目前沒有 B 級觀察標的。",
+    empty: "目前沒有 B 級觀察標的。可換分類、提高掃描數，或今天先休息。",
     tone: "watch"
   },
   avoidList: {
     title: "避開名單",
-    empty: "本次沒有需要避開的風險標的。",
+    empty: "本次沒有需要避開的風險標的。仍要留意隔日開盤與大盤方向。",
     tone: "risk"
   }
 };
@@ -329,7 +329,16 @@ function ResultTable({
   return (
     <article className={`after-market-result after-market-result-${copy.tone}`}>
       <div className="after-market-result-header">
-        <h3>{title}</h3>
+        <div>
+          <h3>{title}</h3>
+          <small>
+            {section === "aList"
+              ? "條件相對完整，適合進一步研究。"
+              : section === "bList"
+                ? "有部分條件，先列入觀察。"
+                : "風險偏高，短線先排除。"}
+          </small>
+        </div>
         <span>{items.length} 檔</span>
       </div>
 

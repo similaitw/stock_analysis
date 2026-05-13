@@ -91,12 +91,10 @@ export default async function StrategyPage() {
   return (
     <main className="page-shell">
       <section className="page-hero">
-        <p className="eyebrow">Strategy</p>
-        <h2>XQ 模組化策略工作台</h2>
-        <p>技術指標、籌碼指標與既有掃描紀錄整合在同一個策略頁，支援盤中與盤後條件組合。</p>
+        <p className="eyebrow">Strategy Scan</p>
+        <h2>先找今天值得研究的股票</h2>
+        <p>本頁適合兩種情境：已經知道股票代碼時做全面分析，或依分類與策略組合批次掃描。先使用盤後選股操作台，進階使用者再看下方 XQ 條件工具。</p>
       </section>
-
-      <XQStrategyWorkbench indicators={indicators} />
 
       <AfterMarketScreeningWorkbench
         recentScans={recentAfterMarketScans}
@@ -105,10 +103,19 @@ export default async function StrategyPage() {
         initialCacheEntries={dailyCacheEntries}
       />
 
+      <section className="strategy-guidance-strip">
+        <div>
+          <strong>進階條件工具</strong>
+          <span>已熟悉技術/籌碼條件後，再用這裡自訂 XQ 類條件。新手可以先跳過。</span>
+        </div>
+      </section>
+
+      <XQStrategyWorkbench indicators={indicators} />
+
       <DataTable
         title="最近每日盤後篩選"
         rows={snapshot.afterMarketScans.map((item) => ({
-          ScanID: item.id,
+          掃描ID: item.id,
           日期: item.date,
           股票池: item.market_scope,
           模式: item.profile,
@@ -118,14 +125,14 @@ export default async function StrategyPage() {
           避開: (item.counts as Record<string, unknown> | undefined)?.avoidList ?? 0,
           時間: item.executed_at
         }))}
-        emptyMessage="目前沒有每日盤後篩選紀錄。"
+        emptyMessage="目前沒有每日盤後篩選紀錄。先在上方操作台按「台灣50」或「分類策略組合掃描」。"
       />
 
       <DataTable
         title="最近隔日監控名單"
         rows={snapshot.nextDayWatchlists.map((item) => ({
           名單ID: item.id,
-          來源Scan: item.source_scan_id,
+          來源掃描: item.source_scan_id,
           交易日: item.trade_date,
           股票數: Array.isArray(item.stocks) ? item.stocks.length : 0,
           建立時間: item.created_at
@@ -134,7 +141,7 @@ export default async function StrategyPage() {
       />
 
       <DataTable
-        title="最近 Screen Runs"
+        title="最近策略條件掃描"
         rows={snapshot.screenRuns.map((item) => ({
           名稱: item.name,
           市場: item.market_scope,
@@ -142,18 +149,18 @@ export default async function StrategyPage() {
           命中數: item.result_count,
           時間: item.executed_at
         }))}
-        emptyMessage="目前沒有保存的 screen runs。"
+        emptyMessage="目前沒有保存的策略條件掃描。新手可先使用上方盤後選股操作台。"
       />
 
       <DataTable
-        title="最近 Signal Events"
+        title="最近訊號事件"
         rows={snapshot.signalEvents.map((item) => ({
           股票: item.stock_id,
           名稱: item.stock_name,
           原因: item.reason,
           時間: item.detected_at
         }))}
-        emptyMessage="目前沒有 signal events。"
+        emptyMessage="目前沒有訊號事件。先執行策略掃描後，這裡會顯示命中原因。"
       />
     </main>
   );

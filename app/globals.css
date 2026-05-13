@@ -534,6 +534,82 @@ button:disabled {
   color: #9f1d1d;
 }
 
+.home-guide-panel,
+.strategy-guidance-strip,
+.investor-next-steps {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.home-guide-title h2 {
+  margin: 0;
+}
+
+.home-guide-steps,
+.investor-next-steps {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.home-guide-steps a,
+.investor-next-steps article {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px 12px;
+  align-items: center;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.home-guide-steps span,
+.investor-next-steps span {
+  display: grid;
+  grid-row: span 2;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--panel-solid);
+  font-weight: 900;
+}
+
+.home-guide-steps strong,
+.home-guide-steps small,
+.investor-next-steps strong,
+.investor-next-steps small {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.home-guide-steps small,
+.investor-next-steps small,
+.strategy-guidance-strip span {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.strategy-guidance-strip {
+  border-left: 5px solid var(--accent);
+}
+
+.strategy-guidance-strip div {
+  display: grid;
+  gap: 4px;
+}
+
+.strategy-guidance-strip strong {
+  font-size: 1.08rem;
+}
+
 .beginner-guide-page {
   gap: 22px;
 }
@@ -882,6 +958,46 @@ button:disabled {
   color: #256c3b;
 }
 
+.investor-action-label {
+  width: fit-content;
+  max-width: 100%;
+  margin-bottom: 6px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.investor-action-label.go {
+  background: #edf7ee;
+  color: #256c3b;
+}
+
+.investor-action-label.watch {
+  background: #fff5df;
+  color: #8a5a0c;
+}
+
+.investor-action-label.hold {
+  background: #eef1f4;
+  color: #475569;
+}
+
+.investor-candidate-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.investor-candidate-links a {
+  padding: 7px 10px;
+  border-radius: 12px;
+  background: var(--text);
+  color: var(--panel-solid);
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
 .investor-risk-list article {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -1107,10 +1223,12 @@ button:disabled {
   }
 
   .beginner-hero,
+  .home-guide-steps,
   .beginner-step-grid,
   .beginner-example-list,
   .beginner-rule-section,
-  .beginner-rule-list {
+  .beginner-rule-list,
+  .investor-next-steps {
     grid-template-columns: 1fr;
   }
 
@@ -1752,6 +1870,17 @@ button:disabled {
 .after-market-result-header h3 {
   margin: 0;
   font-size: 1rem;
+}
+
+.after-market-result-header {
+  align-items: start;
+}
+
+.after-market-result-header small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  line-height: 1.45;
 }
 
 .after-market-factor-grid > div {

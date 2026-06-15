@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>賴氏家族投資儀表板</title>
+  <style>
+    :root{--bg:#0f172a;--panel:#111827;--panel2:#1f2937;--text:#f8fafc;--muted:#94a3b8;--line:#334155;--good:#22c55e;--bad:#ef4444;--warn:#f59e0b;--blue:#38bdf8;--purple:#a78bfa}
+    *{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,"Segoe UI","Noto Sans TC",sans-serif;background:linear-gradient(180deg,#0b1020,#111827 35%,#0f172a);color:var(--text)}
+    .wrap{max-width:1320px;margin:auto;padding:20px}.top{display:flex;gap:16px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap}.title h1{margin:0 0 6px;font-size:clamp(26px,4vw,42px)}.title p{margin:0;color:var(--muted)}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap}button,.btn{border:0;border-radius:12px;padding:10px 14px;background:#2563eb;color:white;font-weight:700;cursor:pointer}button.secondary{background:#334155}button.warn{background:#b45309}button.danger{background:#b91c1c}input,select{width:100%;background:#0b1220;color:white;border:1px solid var(--line);border-radius:10px;padding:9px}.grid{display:grid;gap:14px}.cards{grid-template-columns:repeat(4,minmax(0,1fr));margin:18px 0}.card,.panel{background:rgba(17,24,39,.94);border:1px solid rgba(148,163,184,.18);border-radius:18px;box-shadow:0 14px 30px rgba(0,0,0,.18)}.card{padding:16px}.label{color:var(--muted);font-size:13px}.value{font-size:28px;font-weight:800;margin-top:7px}.small{font-size:13px;color:var(--muted)}.good{color:var(--good)}.bad{color:var(--bad)}.warnText{color:var(--warn)}
+    .panel{padding:18px;margin:14px 0}.panel h2{margin:0 0 14px;font-size:20px}.two{grid-template-columns:1.45fr 1fr}.three{grid-template-columns:repeat(3,1fr)}
+    table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:10px 8px;border-bottom:1px solid #263244;text-align:right}th:first-child,td:first-child{text-align:left}th{color:#cbd5e1;background:#111827;position:sticky;top:0}.tableWrap{overflow:auto;max-height:520px;border-radius:12px}.tag{display:inline-block;padding:3px 8px;border-radius:999px;background:#1e3a8a;color:#dbeafe;font-size:12px}.tag.core{background:#14532d;color:#dcfce7}.tag.satellite{background:#581c87;color:#f3e8ff}.tag.cash{background:#78350f;color:#fef3c7}
+    .formGrid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}.formGrid .wide{grid-column:span 2}.allocRow{display:grid;grid-template-columns:170px 1fr 75px;gap:10px;align-items:center;margin:10px 0}.bar{height:14px;background:#273449;border-radius:999px;overflow:hidden}.fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--purple));border-radius:999px}.rule{padding:12px;border-left:4px solid var(--blue);background:#0b1220;border-radius:10px;margin:8px 0}.notice{padding:12px;border-radius:12px;background:#3f2b0b;color:#fde68a;margin:12px 0}.footer{padding:28px 0;color:var(--muted);font-size:12px;text-align:center}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}.tab{background:#1f2937}.tab.active{background:#2563eb}.section{display:none}.section.active{display:block}
+    @media(max-width:900px){.cards,.two,.three{grid-template-columns:1fr 1fr}.formGrid{grid-template-columns:1fr 1fr}.formGrid .wide{grid-column:span 2}}@media(max-width:600px){.cards,.two,.three{grid-template-columns:1fr}.formGrid{grid-template-columns:1fr}.formGrid .wide{grid-column:auto}.allocRow{grid-template-columns:125px 1fr 58px}.value{font-size:24px}}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="title"><h1>賴氏家族投資儀表板</h1><p>退休前 10 年｜核心 ETF 複利＋衛星個股分批獲利＋永遠保留現金</p></div>
+    <div class="toolbar"><button onclick="saveData()">儲存</button><button class="secondary" onclick="exportData()">匯出 JSON</button><label class="btn secondary">匯入 JSON<input type="file" accept="application/json" onchange="importData(event)" hidden></label><button class="danger" onclick="resetData()">重設</button></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="dashboard">總覽</button><button class="tab" data-tab="assets">資產管理</button><button class="tab" data-tab="plan">配置計畫</button><button class="tab" data-tab="retirement">退休試算</button><button class="tab" data-tab="rules">操作規則</button>
+  </div>
+
+  <section id="dashboard" class="section active">
+    <div class="grid cards">
+      <div class="card"><div class="label">目前總市值</div><div class="value" id="totalValue">0</div><div class="small">依手動輸入現價計算</div></div>
+      <div class="card"><div class="label">總投入成本</div><div class="value" id="totalCost">0</div><div class="small">含所有帳戶</div></div>
+      <div class="card"><div class="label">未實現損益</div><div class="value" id="totalPL">0</div><div class="small" id="totalPLPct">0%</div></div>
+      <div class="card"><div class="label">現金比率</div><div class="value" id="cashPct">0%</div><div class="small">目標 10%～15%</div></div>
+    </div>
+    <div id="alerts"></div>
+    <div class="grid two">
+      <div class="panel"><h2>目前持股</h2><div class="tableWrap"><table><thead><tr><th>標的</th><th>帳戶</th><th>股數</th><th>均價</th><th>現價</th><th>市值</th><th>損益</th><th>報酬率</th></tr></thead><tbody id="holdingsBody"></tbody></table></div></div>
+      <div class="panel"><h2>資產配置</h2><div id="allocationBars"></div></div>
+    </div>
+  </section>
+
+  <section id="assets" class="section">
+    <div class="panel"><h2>新增／修改持股</h2><div class="formGrid">
+      <div><label class="label">代號</label><input id="fCode" placeholder="009816"></div><div class="wide"><label class="label">完整名稱</label><input id="fName" placeholder="凱基台灣TOP50 ETF"></div><div><label class="label">帳戶</label><select id="fAccount"><option>昭嬿</option><option>思明</option><option>可兒</option><option>苡妮</option><option>家族現金</option></select></div><div><label class="label">類別</label><select id="fType"><option value="核心ETF">核心ETF</option><option value="成長ETF">成長ETF</option><option value="高股息ETF">高股息ETF</option><option value="個股">個股</option><option value="海外ETF">海外ETF</option><option value="現金">現金</option><option value="黃金">黃金</option></select></div><div><label class="label">幣別</label><select id="fCurrency"><option>TWD</option><option>USD</option></select></div>
+      <div><label class="label">股數／金額</label><input id="fQty" type="number" step="0.01"></div><div><label class="label">均價</label><input id="fAvg" type="number" step="0.01"></div><div><label class="label">現價</label><input id="fPrice" type="number" step="0.01"></div><div><label class="label">美元匯率</label><input id="fFx" type="number" step="0.01" value="32.5"></div><div class="wide"><label class="label">備註</label><input id="fNote" placeholder="核心、衛星、停利規則…"></div><div style="align-self:end"><button onclick="addAsset()">加入持股</button></div>
+    </div></div>
+    <div class="panel"><h2>編輯清單</h2><div class="tableWrap"><table><thead><tr><th>標的</th><th>帳戶</th><th>類別</th><th>股數</th><th>均價</th><th>現價</th><th>備註</th><th>操作</th></tr></thead><tbody id="editBody"></tbody></table></div></div>
+  </section>
+
+  <section id="plan" class="section">
+    <div class="grid two">
+      <div class="panel"><h2>退休前 10 年目標配置</h2><div id="targetEditor"></div><button onclick="saveTargets()">儲存配置</button></div>
+      <div class="panel"><h2>每月定期投入</h2><div id="monthlyEditor"></div><div class="notice">原則：新增資金優先補低於目標比重的核心資產，不因短期新聞改變長期配置。</div></div>
+    </div>
+    <div class="panel"><h2>個股獲利回流</h2><div class="rule"><b>山林水環境工程（8473）</b>：已分批實現部分獲利；剩餘部位以趨勢停利，不再追價，獲利優先回流 009816 與 00878。</div><div class="rule"><b>八貫企業（1342）</b>：屬衛星成長股；突破前高可分批獲利，跌破中期支撐則減碼。</div><div class="rule"><b>新麥企業（1580）</b>：不再攤平；反彈接近成本時逐步轉回核心 ETF。</div></div>
+  </section>
+
+  <section id="retirement" class="section">
+    <div class="panel"><h2>退休資產試算</h2><div class="formGrid">
+      <div><label class="label">目前投資資產</label><input id="rStart" type="number" value="2000000"></div><div><label class="label">每月投入</label><input id="rMonthly" type="number" value="20000"></div><div><label class="label">年化報酬率 %</label><input id="rRate" type="number" step="0.1" value="7"></div><div><label class="label">距退休年數</label><input id="rYears" type="number" value="10"></div><div><label class="label">退休後年提領率 %</label><input id="rWithdraw" type="number" step="0.1" value="4"></div><div style="align-self:end"><button onclick="calcRetirement()">重新試算</button></div>
+    </div></div>
+    <div class="grid cards"><div class="card"><div class="label">預估退休資產</div><div class="value" id="rFuture">0</div></div><div class="card"><div class="label">可支應年現金流</div><div class="value" id="rAnnual">0</div></div><div class="card"><div class="label">可支應月現金流</div><div class="value" id="rMonthIncome">0</div></div><div class="card"><div class="label">距每月 15 萬目標</div><div class="value" id="rGap">0</div></div></div>
+    <div class="panel"><h2>年度資產路徑</h2><div class="tableWrap"><table><thead><tr><th>年度</th><th>期末資產</th><th>累計投入</th><th>累計成長</th></tr></thead><tbody id="retirementBody"></tbody></table></div></div>
+  </section>
+
+  <section id="rules" class="section">
+    <div class="panel"><h2>賴氏家族投資憲法</h2>
+      <div class="rule"><b>核心 ETF 不做短線停利。</b> 只按半年或年度再平衡。</div>
+      <div class="rule"><b>009816 是台股複利核心。</b> 00878 提供現金流，00881 是 AI 科技加速器。</div>
+      <div class="rule"><b>單一個股不得成為家族核心。</b> 衛星個股合計原則上控制在金融資產 10%～15%。</div>
+      <div class="rule"><b>永遠保留現金。</b> 投資戰備現金目標 10%～15%，另留家庭緊急預備金。</div>
+      <div class="rule"><b>上漲時慢買、下跌時快買。</b> 不掛漲停價追熱門標的，不因新聞臨時翻修長期計畫。</div>
+      <div class="rule"><b>個股分批收割。</b> 獲利回流核心 ETF，不追下一檔題材股。</div>
+    </div>
+  </section>
+  <div class="footer">資料只儲存在此瀏覽器 localStorage；本工具用於紀律管理，不提供即時報價或投資保證。</div>
+</div>
+<script>
+const DEFAULT={assets:[
+ {code:'009816',name:'凱基台灣TOP50 ETF',account:'昭嬿',type:'核心ETF',currency:'TWD',qty:18617,avg:11.7,price:15.43,fx:1,note:'家族台股複利核心'},
+ {code:'00878',name:'國泰永續高股息 ETF',account:'昭嬿',type:'高股息ETF',currency:'TWD',qty:10727,avg:23.4,price:32.49,fx:1,note:'現金流核心'},
+ {code:'00919',name:'群益台灣精選高息 ETF',account:'昭嬿',type:'高股息ETF',currency:'TWD',qty:6100,avg:24.0,price:30.3,fx:1,note:'既有部位，暫不擴張'},
+ {code:'0056',name:'元大高股息 ETF',account:'昭嬿',type:'高股息ETF',currency:'TWD',qty:4000,avg:40.0,price:52.8,fx:1,note:'既有部位'},
+ {code:'00881',name:'國泰台灣科技龍頭 ETF',account:'昭嬿',type:'成長ETF',currency:'TWD',qty:50,avg:48.3,price:55.3,fx:1,note:'AI 科技衛星'},
+ {code:'1342',name:'八貫企業',account:'昭嬿',type:'個股',currency:'TWD',qty:1000,avg:104,price:115.5,fx:1,note:'衛星成長股'},
+ {code:'1580',name:'新麥企業',account:'昭嬿',type:'個股',currency:'TWD',qty:2000,avg:136.75,price:125,fx:1,note:'反彈逐步轉核心'},
+ {code:'2308',name:'台達電子工業',account:'昭嬿',type:'個股',currency:'TWD',qty:4,avg:2260,price:2360,fx:1,note:'AI 電力少量核心個股'},
+ {code:'2330',name:'台灣積體電路製造',account:'昭嬿',type:'個股',currency:'TWD',qty:32,avg:2079,price:2380,fx:1,note:'控制單一個股曝險'},
+ {code:'8473',name:'山林水環境工程',account:'昭嬿',type:'個股',currency:'TWD',qty:1632,avg:36.73,price:51.5,fx:1,note:'已賣 2,000 股，剩餘趨勢停利'},
+ {code:'VT',name:'Vanguard Total World Stock ETF',account:'思明',type:'海外ETF',currency:'USD',qty:1,avg:331.02,price:351,fx:32.5,note:'全球底盤'},
+ {code:'VOO',name:'Vanguard S&P 500 ETF',account:'思明',type:'海外ETF',currency:'USD',qty:1,avg:381.79,price:646,fx:32.5,note:'美國核心'},
+ {code:'QQQ',name:'Invesco QQQ Trust',account:'思明',type:'海外ETF',currency:'USD',qty:1,avg:109.28,price:614,fx:32.5,note:'未來新增以 QQQM 優先'},
+ {code:'NVDA',name:'NVIDIA Corporation',account:'思明',type:'個股',currency:'USD',qty:1,avg:148.64,price:181,fx:32.5,note:'高波動衛星'},
+ {code:'IAU',name:'iShares Gold Trust',account:'思明',type:'黃金',currency:'USD',qty:1,avg:137.43,price:129,fx:32.5,note:'避險資產'},
+ {code:'CASH',name:'家族投資戰備現金',account:'家族現金',type:'現金',currency:'TWD',qty:384000,avg:1,price:1,fx:1,note:'目標至少 10%～15%'}
+],targets:{'核心ETF':30,'高股息ETF':25,'成長ETF':15,'海外ETF':20,'個股':5,'現金':10,'黃金':5},monthly:{'009816':8000,'00878':3000,'00881':3000,'VOO':3000,'QQQM':2000,'VT':1000}};
+let data=JSON.parse(localStorage.getItem('laiFamilyPlan')||'null')||structuredClone(DEFAULT);
+const fmt=n=>new Intl.NumberFormat('zh-TW',{style:'currency',currency:'TWD',maximumFractionDigits:0}).format(Number(n)||0);
+const val=a=>(Number(a.qty)||0)*(Number(a.price)||0)*(a.currency==='USD'?(Number(a.fx)||32.5):1);
+const cost=a=>(Number(a.qty)||0)*(Number(a.avg)||0)*(a.currency==='USD'?(Number(a.fx)||32.5):1);
+function render(){const tv=data.assets.reduce((s,a)=>s+val(a),0),tc=data.assets.reduce((s,a)=>s+cost(a),0),pl=tv-tc;totalValue.textContent=fmt(tv);totalCost.textContent=fmt(tc);totalPL.textContent=(pl>=0?'+':'')+fmt(pl);totalPL.className='value '+(pl>=0?'good':'bad');totalPLPct.textContent=(tc?pl/tc*100:0).toFixed(2)+'%';const cash=data.assets.filter(a=>a.type==='現金').reduce((s,a)=>s+val(a),0);cashPct.textContent=(tv?cash/tv*100:0).toFixed(1)+'%';
+ holdingsBody.innerHTML=data.assets.map(a=>{const p=val(a)-cost(a),pp=cost(a)?p/cost(a)*100:0;return `<tr><td><b>${a.code}</b><br><span class="small">${a.name}</span></td><td>${a.account}</td><td>${Number(a.qty).toLocaleString()}</td><td>${a.avg}</td><td>${a.price}</td><td>${fmt(val(a))}</td><td class="${p>=0?'good':'bad'}">${p>=0?'+':''}${fmt(p)}</td><td class="${pp>=0?'good':'bad'}">${pp.toFixed(1)}%</td></tr>`}).join('');
+ editBody.innerHTML=data.assets.map((a,i)=>`<tr><td>${a.code}<br><span class="small">${a.name}</span></td><td>${a.account}</td><td>${a.type}</td><td><input value="${a.qty}" onchange="editAsset(${i},'qty',this.value)"></td><td><input value="${a.avg}" onchange="editAsset(${i},'avg',this.value)"></td><td><input value="${a.price}" onchange="editAsset(${i},'price',this.value)"></td><td><input value="${a.note||''}" onchange="editAsset(${i},'note',this.value)"></td><td><button class="danger" onclick="delAsset(${i})">刪除</button></td></tr>`).join('');
+ const by={};data.assets.forEach(a=>by[a.type]=(by[a.type]||0)+val(a));allocationBars.innerHTML=Object.entries(by).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="allocRow"><div>${k}</div><div class="bar"><div class="fill" style="width:${tv?v/tv*100:0}%"></div></div><div>${(tv?v/tv*100:0).toFixed(1)}%</div></div>`).join('');
+ alerts.innerHTML='';const cp=tv?cash/tv*100:0;if(cp<10)alerts.innerHTML+=`<div class="notice">⚠ 現金比率僅 ${cp.toFixed(1)}%，低於家族投資憲法建議的 10%。</div>`;const stock=data.assets.filter(a=>a.type==='個股').reduce((s,a)=>s+val(a),0);if(tv&&stock/tv>0.15)alerts.innerHTML+=`<div class="notice">⚠ 個股合計 ${(stock/tv*100).toFixed(1)}%，高於衛星部位建議上限 15%。</div>`;
+ renderTargets();calcRetirement();}
+function addAsset(){const a={code:fCode.value.trim(),name:fName.value.trim(),account:fAccount.value,type:fType.value,currency:fCurrency.value,qty:+fQty.value||0,avg:+fAvg.value||0,price:+fPrice.value||0,fx:+fFx.value||32.5,note:fNote.value.trim()};if(!a.code||!a.name)return alert('請填代號與完整名稱');data.assets.push(a);saveData();['fCode','fName','fQty','fAvg','fPrice','fNote'].forEach(id=>document.getElementById(id).value='');}
+function editAsset(i,k,v){data.assets[i][k]=['qty','avg','price','fx'].includes(k)?+v:v;saveData()}function delAsset(i){if(confirm('確定刪除此標的？')){data.assets.splice(i,1);saveData()}}
+function saveData(){localStorage.setItem('laiFamilyPlan',JSON.stringify(data));render()}function resetData(){if(confirm('確定恢復預設資料？')){data=structuredClone(DEFAULT);saveData()}}
+function exportData(){const b=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download='賴氏家族投資計畫.json';a.click();URL.revokeObjectURL(u)}function importData(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{data=JSON.parse(r.result);saveData()}catch{alert('JSON 格式錯誤')}};r.readAsText(f)}
+function renderTargets(){targetEditor.innerHTML=Object.entries(data.targets).map(([k,v])=>`<div class="allocRow"><div>${k}</div><input type="range" min="0" max="100" value="${v}" oninput="this.nextElementSibling.value=this.value"><input data-target="${k}" value="${v}" type="number"></div>`).join('');monthlyEditor.innerHTML=Object.entries(data.monthly).map(([k,v])=>`<div class="allocRow"><div>${k}</div><input value="${v}" type="number" data-monthly="${k}"><div>元/月</div></div>`).join('')}
+function saveTargets(){document.querySelectorAll('[data-target]').forEach(x=>data.targets[x.dataset.target]=+x.value);document.querySelectorAll('[data-monthly]').forEach(x=>data.monthly[x.dataset.monthly]=+x.value);const s=Object.values(data.targets).reduce((a,b)=>a+b,0);if(s!==100)return alert('目標配置合計必須等於 100%，目前為 '+s+'%');saveData();alert('配置已儲存')}
+function calcRetirement(){let start=+rStart.value||0,m=+rMonthly.value||0,rate=(+rRate.value||0)/100,years=+rYears.value||0,w=(+rWithdraw.value||0)/100,b=start,invest=start,rows=[];for(let y=1;y<=years;y++){for(let i=0;i<12;i++){b=(b+m)*(1+rate/12);invest+=m}rows.push({y,b,invest,g:b-invest})}const future=b,annual=future*w,month=annual/12,gap=150000-month;rFuture.textContent=fmt(future);rAnnual.textContent=fmt(annual);rMonthIncome.textContent=fmt(month);rGap.textContent=(gap>0?'-':'超過 ')+fmt(Math.abs(gap));rGap.className='value '+(gap<=0?'good':'warnText');retirementBody.innerHTML=rows.map(x=>`<tr><td>第 ${x.y} 年</td><td>${fmt(x.b)}</td><td>${fmt(x.invest)}</td><td>${fmt(x.g)}</td></tr>`).join('')}
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab,.section').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(b.dataset.tab).classList.add('active')});render();
+</script>
+</body>
+</html>
